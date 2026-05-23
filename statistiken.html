@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eye-Tracking Statistiken</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;color:#e0e0e0;font-family:sans-serif;min-height:100vh}
+nav{background:#16213e;padding:16px 32px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #00d4aa}
+nav h1{font-size:1.3rem;color:#00d4aa}
+nav a{color:#aaa;text-decoration:none;padding:8px 16px;border:1px solid #444;border-radius:6px;transition:all .2s}
+nav a:hover{border-color:#00d4aa;color:#00d4aa}
+.c{max-width:1200px;margin:0 auto;padding:32px 24px}
+.dz{border:2px dashed #444;border-radius:12px;padding:40px;text-align:center;cursor:pointer;margin-bottom:32px;background:#16213e;transition:all .3s}
+.dz:hover,.dz.ov{border-color:#00d4aa;background:#0f3460}
+.dz p{font-size:1.1rem;color:#aaa;margin-bottom:8px}
+.dz small{color:#666}
+.stats{display:none}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:32px}
+.card{background:#16213e;border-radius:12px;padding:20px;text-align:center;border:1px solid #2a2a4a}
+.card .val{font-size:2rem;font-weight:700;color:#00d4aa;display:block}
+.card .lab{font-size:.85rem;color:#888;margin-top:4px}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px}
+.chart-box{background:#16213e;border-radius:12px;padding:20px}
+.chart-box h3{color:#00d4aa;margin-bottom:16px;font-size:.95rem}
+.heatmap-box{background:#16213e;border-radius:12px;padding:20px;margin-bottom:32px}
+.heatmap-box h3{color:#00d4aa;margin-bottom:16px;font-size:.95rem}
+.grid3x3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:600px}
+.cell{border-radius:8px;padding:16px;text-align:center;transition:all .3s;min-height:80px;display:flex;flex-direction:column;justify-content:center}
+.cell .cnt{font-size:1.5rem;font-weight:700}
+.cell .lbl{font-size:.75rem;color:#aaa;margin-top:4px}
+.table-box{background:#16213e;border-radius:12px;padding:20px;margin-bottom:32px}
+.table-box h3{color:#00d4aa;margin-bottom:16px;font-size:.95rem}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th{color:#00d4aa;text-align:left;padding:8px 12px;border-bottom:1px solid #2a2a4a}
+td{padding:6px 12px;border-bottom:1px solid #1a1a2e;color:#ccc}
+tr:hover td{background:#0f3460}
+@media(max-width:700px){.charts{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav>
+  <h1>📊 Eye-Tracking Statistiken</h1>
+  <a href="annotator.html">🎯 Annotator ←</a>
+</nav>
+<div class="c">
+  <div class="dz" id="dz">
+    <p>📁 JSON hier reinziehen</p>
+    <small>oder klicken zum Auswählen (kreise_manuell.json)</small>
+    <input type="file" id="fi" accept=".json" style="display:none">
+  </div>
+
+  <div class="stats" id="stats">
+    <div class="cards">
+      <div class="card"><span class="val" id="s-total">0</span><div class="lab">Klicks gesamt</div></div>
+      <div class="card"><span class="val" id="s-dur">0s</span><div class="lab">Video-Dauer annotiert</div></div>
+      <div class="card"><span class="val" id="s-avg">0s</span><div class="lab">Ø Dauer pro Klick</div></div>
+      <div class="card"><span class="val" id="s-max">0s</span><div class="lab">Längste Verweildauer</div></div>
+    </div>
+
+    <div class="charts">
+      <div class="chart-box"><h3>Klicks pro Bildschirmbereich</h3><canvas id="ch-ort"></canvas></div>
+      <div class="chart-box"><h3>Zeitverlauf der Klicks</h3><canvas id="ch-time"></canvas></div>
+    </div>
+
+    <div class="heatmap-box">
+      <h3>Heatmap – Bildschirmbereiche</h3>
+      <div class="grid3x3" id="heatmap"></div>
+    </div>
+
+    <div class="table-box">
+      <h3>Alle Klicks</h3>
+      <table><thead><tr><th>#</th><th>Zeit</th><th>X</th><th>Y</th><th>Ort</th><th>Dauer bis nächster</th></tr></thead>
+      <tbody id="tbl"></tbody></table>
+    </div>
+  </div>
+</div>
+<script>
+function g(id){return document.getElementById(id)}
+const dz=g('dz');
+g('fi').onchange=e=>{if(e.target.files[0])readFile(e.target.files[0])};
+dz.onclick=()=>g('fi').click();
+dz.ondragover=e=>{e.preventDefault();dz.classList.add('ov')};
+dz.ondragleave=()=>dz.classList.remove('ov');
+dz.ondrop=e=>{e.preventDefault();dz.classList.remove('ov');if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0])};
+
+function readFile(f){
+  const r=new FileReader();
+  r.onload=e=>{try{showStats(JSON.parse(e.target.result));}catch(err){alert('Ungültige JSON-Datei');}};
+  r.readAsText(f);
+}
+
+function showStats(data){
+  const k=data.kreise||[];
+  if(k.length===0){alert('Keine Klicks gefunden');return;}
+  dz.style.display='none';
+  g('stats').style.display='block';
+
+  const total=k.length;
+  const dur=k[k.length-1].timestamp_s-k[0].timestamp_s;
+  const durations=k.filter(x=>x.dauer_bis_naechster_s!=null).map(x=>x.dauer_bis_naechster_s);
+  const avg=durations.length>0?(durations.reduce((a,b)=>a+b,0)/durations.length).toFixed(2):0;
+  const max=durations.length>0?Math.max(...durations).toFixed(2):0;
+
+  g('s-total').textContent=total;
+  g('s-dur').textContent=dur.toFixed(1)+'s';
+  g('s-avg').textContent=avg+'s';
+  g('s-max').textContent=max+'s';
+
+  const ortCount={};
+  k.forEach(x=>{ortCount[x.ort]=(ortCount[x.ort]||0)+1});
+  const ortKeys=Object.keys(ortCount).sort((a,b)=>ortCount[b]-ortCount[a]);
+
+  new Chart(g('ch-ort'),{type:'bar',data:{labels:ortKeys,datasets:[{data:ortKeys.map(o=>ortCount[o]),backgroundColor:'#00d4aa',borderRadius:6}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#aaa'},grid:{color:'#2a2a4a'}},y:{ticks:{color:'#aaa'},grid:{color:'#2a2a4a'}}}}});
+
+  const buckets=20;
+  const step=k[k.length-1].timestamp_s/buckets;
+  const bdata=Array(buckets).fill(0);
+  k.forEach(x=>{const b=Math.min(Math.floor(x.timestamp_s/step),buckets-1);bdata[b]++});
+  const blabels=Array.from({length:buckets},(_,i)=>Math.round(i*step)+'s');
+  new Chart(g('ch-time'),{type:'line',data:{labels:blabels,datasets:[{data:bdata,borderColor:'#00d4aa',backgroundColor:'rgba(0,212,170,.1)',fill:true,tension:.4,pointRadius:3}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#aaa'},grid:{color:'#2a2a4a'}},y:{ticks:{color:'#aaa'},grid:{color:'#2a2a4a'}}}}});
+
+  const zones=['oben-links','oben-mitte','oben-rechts','links','zentrum','rechts','unten-links','unten-mitte','unten-rechts'];
+  const hm=g('heatmap');
+  const maxV=Math.max(...zones.map(z=>ortCount[z]||0));
+  hm.innerHTML=zones.map(z=>{
+    const v=ortCount[z]||0;
+    const pct=maxV>0?v/maxV:0;
+    const r=Math.round(pct*212),g2=Math.round(pct*212),b=Math.round(pct*170);
+    const bg=v>0?'rgba('+r+','+g2+','+b+','+Math.max(0.15,pct)+')':'rgba(30,30,60,0.5)';
+    return '<div class="cell" style="background:'+bg+'"><span class="cnt">'+v+'</span><div class="lbl">'+z+'</div></div>';
+  }).join('');
+
+  const tb=g('tbl');
+  tb.innerHTML=k.map(x=>'<tr><td>'+x.nr+'</td><td>'+x.timestamp_s+'s</td><td>'+x.x+'</td><td>'+x.y+'</td><td>'+x.ort+'</td><td>'+(x.dauer_bis_naechster_s!=null?x.dauer_bis_naechster_s+'s':'–')+'</td></tr>').join('');
+}
+</script>
+</body>
+</html>

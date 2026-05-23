@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eye-Tracking Annotator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;color:#e0e0e0;font-family:sans-serif;min-height:100vh}
+nav{background:#16213e;padding:16px 32px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #00d4aa}
+nav h1{font-size:1.3rem;color:#00d4aa}
+nav a{color:#aaa;text-decoration:none;padding:8px 16px;border:1px solid #444;border-radius:6px;transition:all .2s}
+nav a:hover{border-color:#00d4aa;color:#00d4aa}
+.c{max-width:1200px;margin:0 auto;padding:32px 24px}
+.dz{border:2px dashed #444;border-radius:12px;padding:48px;text-align:center;cursor:pointer;margin-bottom:24px;background:#16213e;transition:all .3s}
+.dz:hover,.dz.ov{border-color:#00d4aa;background:#0f3460}
+.dz p{font-size:1.1rem;color:#aaa;margin-bottom:8px}
+.dz small{color:#666}
+#vw{display:none;position:relative;background:#000;border-radius:12px;overflow:hidden;margin-bottom:16px}
+#vid{width:100%;display:block;cursor:crosshair}
+#cv{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+.ctrl{display:none;align-items:center;gap:16px;padding:16px;background:#16213e;border-radius:10px;margin-bottom:16px;flex-wrap:wrap}
+.bn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:.95rem;font-weight:600;transition:all .2s}
+.bg{background:#00d4aa;color:#1a1a2e}.bg:hover{background:#00f5c4}
+.bd{background:#0f3460;color:#e0e0e0;border:1px solid #444}.bd:hover{border-color:#00d4aa}
+.ib{display:flex;gap:20px;align-items:center;font-size:.9rem;color:#aaa;margin-left:auto}
+.iv{color:#00d4aa;font-weight:700;font-size:1.05rem}
+.ht{font-size:.8rem;color:#555;text-align:center;padding:8px;display:none}
+.kl{background:#16213e;border-radius:10px;padding:16px;max-height:180px;overflow-y:auto;margin-bottom:16px;display:none}
+.kl h3{color:#00d4aa;margin-bottom:8px;font-size:.9rem}
+.ki{font-size:.8rem;color:#aaa;padding:3px 0;border-bottom:1px solid #2a2a4a}
+#dl{width:100%;padding:14px;font-size:1.05rem;display:none;border-radius:10px;border:none;cursor:pointer;background:#00d4aa;color:#1a1a2e;font-weight:700;margin-top:8px}
+#dl:hover{background:#00f5c4}
+</style>
+</head>
+<body>
+<nav>
+  <h1>🎯 Eye-Tracking Annotator</h1>
+  <a href="statistiken.html">📊 Statistiken →</a>
+</nav>
+<div class="c">
+  <div class="dz" id="dz">
+    <p>📁 Video hier reinziehen</p>
+    <small>oder klicken zum Auswählen (MP4)</small>
+    <input type="file" id="fi" accept="video/*" style="display:none">
+  </div>
+  <div id="vw"><video id="vid" playsinline></video><canvas id="cv"></canvas></div>
+  <div class="ctrl" id="ctrl">
+    <button class="bn bg" id="pb">▶ Play</button>
+    <button class="bn bd" id="rb">↺ Reset</button>
+    <div class="ib">
+      <div>t=<span class="iv" id="td">0s</span></div>
+      <div>Klicks: <span class="iv" id="cc">0</span></div>
+      <div>Zuletzt: <span class="iv" id="lp">–</span></div>
+    </div>
+  </div>
+  <p class="ht" id="ht">Leertaste = Pause/Play &nbsp;|&nbsp; Mausklick = Kreis annotieren</p>
+  <div class="kl" id="kl"><h3>Letzte Klicks</h3><div id="ki"></div></div>
+  <button id="dl">💾 JSON herunterladen (0 Klicks)</button>
+</div>
+<script>
+const VW=1920,VH=1080,klicks=[],flash=[];
+const vid=document.getElementById('vid'),cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+function ort(x,y){const c=x<VW/3?'links':(x<2*VW/3?'mitte':'rechts'),r=y<VH/3?'oben':(y<2*VH/3?'mitte':'unten');if(r==='mitte'&&c==='mitte')return 'zentrum';if(r==='mitte')return c;return r+'-'+c;}
+function g(id){return document.getElementById(id)}
+function load(f){vid.src=URL.createObjectURL(f);g('vw').style.display='block';g('ctrl').style.display='flex';g('ht').style.display='block';g('dz').style.display='none';}
+const dz=g('dz');
+g('fi').onchange=e=>{if(e.target.files[0])load(e.target.files[0])};
+dz.onclick=()=>g('fi').click();
+dz.ondragover=e=>{e.preventDefault();dz.classList.add('ov')};
+dz.ondragleave=()=>dz.classList.remove('ov');
+dz.ondrop=e=>{e.preventDefault();dz.classList.remove('ov');if(e.dataTransfer.files[0])load(e.dataTransfer.files[0])};
+vid.onloadedmetadata=()=>{cv.width=vid.videoWidth;cv.height=vid.videoHeight};
+vid.ontimeupdate=()=>{g('td').textContent=vid.currentTime.toFixed(2)+'s';draw()};
+g('pb').onclick=()=>{if(vid.paused){vid.play();g('pb').textContent='⏸ Pause';}else{vid.pause();g('pb').textContent='▶ Play';}};
+g('rb').onclick=()=>{if(confirm('Alle Klicks löschen?')){klicks.length=0;flash.length=0;ui();}};
+document.onkeydown=e=>{if(e.code==='Space'&&g('vw').style.display!=='none'){e.preventDefault();if(vid.paused){vid.play();g('pb').textContent='⏸ Pause';}else{vid.pause();g('pb').textContent='▶ Play';}}};
+vid.onclick=e=>{
+  const r=vid.getBoundingClientRect();
+  const x=Math.round((e.clientX-r.left)*(vid.videoWidth/r.width));
+  const y=Math.round((e.clientY-r.top)*(vid.videoHeight/r.height));
+  const ts=parseFloat(vid.currentTime.toFixed(3));
+  const nr=klicks.length+1;
+  if(klicks.length>0)klicks[klicks.length-1].dauer_bis_naechster_s=parseFloat((ts-klicks[klicks.length-1].timestamp_s).toFixed(3));
+  klicks.push({nr,x,y,ort:ort(x,y),timestamp_s:ts,timestamp_ms:parseFloat((ts*1000).toFixed(1)),dauer_bis_naechster_s:null});
+  flash.push({x,y,t:Date.now()});
+  ui();
+};
+function draw(){
+  const now=Date.now();
+  ctx.clearRect(0,0,cv.width,cv.height);
+  flash.filter(m=>now-m.t<1500).forEach(m=>{
+    const a=1-(now-m.t)/1500;
+    ctx.strokeStyle='rgba(0,212,170,'+a+')';ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(m.x,m.y,30,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(m.x-22,m.y);ctx.lineTo(m.x+22,m.y);ctx.moveTo(m.x,m.y-22);ctx.lineTo(m.x,m.y+22);ctx.stroke();
+  });
+  klicks.slice(-8).forEach(k=>{ctx.fillStyle='rgba(255,140,0,.7)';ctx.beginPath();ctx.arc(k.x,k.y,6,0,Math.PI*2);ctx.fill()});
+}
+function ui(){
+  g('cc').textContent=klicks.length;
+  g('dl').textContent='💾 JSON herunterladen ('+klicks.length+' Klicks)';
+  g('dl').style.display=klicks.length>0?'block':'none';
+  g('kl').style.display=klicks.length>0?'block':'none';
+  if(klicks.length>0){const l=klicks[klicks.length-1];g('lp').textContent=l.ort;const d=g('ki'),i=document.createElement('div');i.className='ki';i.textContent='#'+l.nr+' t='+l.timestamp_s+'s x='+l.x+' y='+l.y+' → '+l.ort;d.insertBefore(i,d.firstChild);if(d.children.length>20)d.removeChild(d.lastChild);}
+}
+g('dl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({video:'video.mp4',klicks_gesamt:klicks.length,kreise:klicks},null,2)],{type:'application/json'}));a.download='kreise_manuell.json';a.click()};
+setInterval(draw,50);
+</script>
+</body>
+</html>
