@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -41,9 +40,9 @@ nav a:hover{border-color:#00d4aa;color:#00d4aa}
 #dl{width:100%;padding:14px;font-size:1.05rem;display:none;border-radius:10px;border:none;cursor:pointer;background:#00d4aa;color:#1a1a2e;font-weight:700;margin-top:4px}
 #dl:hover{background:#00f5c4}
 .banner{display:none;background:#0a2a1a;border:1px solid #00d4aa;border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:.9rem;color:#00d4aa;text-align:center}
-.dz-json{border:2px dashed #444;border-radius:10px;padding:20px;text-align:center;cursor:pointer;margin-bottom:16px;background:#16213e;transition:all .3s;display:none}
-.dz-json:hover,.dz-json.ov{border-color:#f39c12;background:#2c1a0e}
-.dz-json p{color:#f39c12;margin-bottom:4px}
+.dz-json{border:2px dashed #f39c12;border-radius:10px;padding:20px;text-align:center;cursor:pointer;margin-bottom:16px;background:#16213e;transition:all .3s;display:none}
+.dz-json:hover,.dz-json.ov{background:#2c1a0e}
+.dz-json p{color:#f39c12;margin-bottom:4px;font-size:.95rem}
 .dz-json small{color:#666;font-size:.8rem}
 </style>
 </head>
@@ -57,11 +56,11 @@ nav a:hover{border-color:#00d4aa;color:#00d4aa}
   <div class="dz" id="dz">
     <p>Video hier reinziehen</p>
     <small>oder klicken zum Auswaehlen (MP4)</small>
-    <input type="file" id="fi" accept="video/*" style="display:none">
+    <input type="file" id="fi" style="display:none">
   </div>
 
   <div class="dz-json" id="dzJson">
-    <p>JSON laden (optional) - fuer Replay einer frueheren Session</p>
+    <p>Vorherige JSON laden (optional) - fuer Replay einer alten Session</p>
     <small>kreise_manuell.json hier reinziehen oder klicken</small>
     <input type="file" id="fiJson" accept=".json" style="display:none">
   </div>
@@ -76,7 +75,7 @@ nav a:hover{border-color:#00d4aa;color:#00d4aa}
   </div>
 
   <div class="banner" id="banner">
-    Replay-Modus: Kreise werden zum annotierten Zeitpunkt angezeigt. Klicke in der Liste auf einen Eintrag um dorthin zu springen.
+    Replay-Modus aktiv - Kreise werden zum annotierten Zeitpunkt angezeigt. In der Liste klicken um zum Zeitpunkt zu springen.
   </div>
 
   <div class="ctrl" id="ctrl">
@@ -112,9 +111,14 @@ const VW=1920,VH=1080,klicks=[],flash=[];
 let speedFactor=1,replayModus=false;
 const vid=document.getElementById('vid'),cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 function g(id){return document.getElementById(id)}
-function ort(x,y){const c=x<VW/3?'links':(x<2*VW/3?'mitte':'rechts'),r=y<VH/3?'oben':(y<2*VH/3?'mitte':'unten');if(r==='mitte'&&c==='mitte')return'zentrum';if(r==='mitte')return c;return r+'-'+c;}
+function ort(x,y){
+  const c=x<VW/3?'links':(x<2*VW/3?'mitte':'rechts');
+  const r=y<VH/3?'oben':(y<2*VH/3?'mitte':'unten');
+  if(r==='mitte'&&c==='mitte')return 'zentrum';
+  if(r==='mitte')return c;
+  return r+'-'+c;
+}
 
-// Video laden
 const dz=g('dz');
 g('fi').onchange=e=>{if(e.target.files[0])loadVid(e.target.files[0])};
 dz.onclick=()=>g('fi').click();
@@ -133,7 +137,6 @@ function loadVid(f){
   vid.style.cursor='crosshair';
 }
 
-// JSON laden (fuer Replay alter Daten)
 const dzJson=g('dzJson');
 g('fiJson').onchange=e=>{if(e.target.files[0])loadJson(e.target.files[0])};
 dzJson.onclick=()=>g('fiJson').click();
@@ -150,7 +153,7 @@ function loadJson(f){
       (data.kreise||[]).forEach(k=>klicks.push({...k}));
       g('dzJson').style.display='none';
       ui();
-      if(klicks.length>0&&!replayModus) toggleReplay();
+      if(klicks.length>0&&!replayModus)toggleReplay();
     }catch(err){alert('Ungueltige JSON Datei');}
   };
   r.readAsText(f);
@@ -158,13 +161,11 @@ function loadJson(f){
 
 vid.onloadedmetadata=()=>{cv.width=vid.videoWidth;cv.height=vid.videoHeight};
 
-// Fortschrittsleiste
 g('pw').onclick=e=>{
   const r=g('pw').getBoundingClientRect();
   vid.currentTime=(e.clientX-r.left)/r.width*vid.duration;
 };
 
-// Play/Pause
 g('playBtn').onclick=()=>togglePlay();
 document.onkeydown=e=>{if(e.code==='Space'&&g('vw').style.display!=='none'){e.preventDefault();togglePlay();}};
 function togglePlay(){
@@ -172,7 +173,6 @@ function togglePlay(){
   else{vid.pause();g('playBtn').textContent='Play';}
 }
 
-// Reset
 g('rb').onclick=()=>{
   if(confirm('Alle Klicks loeschen?')){
     klicks.length=0;flash.length=0;
@@ -181,23 +181,21 @@ g('rb').onclick=()=>{
   }
 };
 
-// Speed
 function setSpeed(f,btn){
   speedFactor=f;vid.playbackRate=f;
   document.querySelectorAll('.bs').forEach(b=>b.classList.remove('ak'));
   btn.classList.add('ak');
 }
 
-// Replay umschalten
 function toggleReplay(){
   replayModus=!replayModus;
   if(replayModus){
     g('replayBtn').textContent='Annotier-Modus';
     g('replayBtn').className='bn bd';
     g('banner').style.display='block';
-    g('hint').textContent='Leertaste = Play/Pause | Fortschrittsleiste = Springen | Liste = zum Zeitpunkt springen';
+    g('hint').textContent='Leertaste = Play/Pause | Fortschrittsleiste klicken = Springen';
     vid.style.cursor='default';
-    g('klTitle').textContent='Klicks (anklicken zum Springen)';
+    g('klTitle').textContent='Klicks (anklicken = zum Zeitpunkt springen)';
   } else {
     g('replayBtn').textContent='Replay ansehen';
     g('replayBtn').className='bn by';
@@ -209,7 +207,6 @@ function toggleReplay(){
   ui();
 }
 
-// Klick ins Video (nur im Annotier-Modus)
 vid.onclick=e=>{
   if(replayModus)return;
   const r=vid.getBoundingClientRect();
@@ -223,8 +220,19 @@ vid.onclick=e=>{
   ui();
 };
 
-// Update
 vid.ontimeupdate=()=>{
   const t=vid.currentTime;
   g('td').textContent=t.toFixed(2)+'s';
-  if(vid.duration>0)g('pb2').style.width=(t/vid.
+  if(vid.duration>0)g('pb2').style.width=(t/vid.duration*100)+'%';
+  draw(t);
+  if(replayModus)updateList(t);
+};
+
+function draw(t){
+  const now=Date.now();
+  ctx.clearRect(0,0,cv.width,cv.height);
+  if(replayModus){
+    klicks.forEach(k=>{
+      const diff=Math.abs(k.timestamp_s-t);
+      if(diff<0.7){
+        const a=1-(diff/0.
