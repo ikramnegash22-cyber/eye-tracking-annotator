@@ -16,34 +16,24 @@ nav a:hover{border-color:#00d4aa;color:#00d4aa}
 .dz:hover,.dz.ov{border-color:#00d4aa;background:#0f3460}
 .dz p{font-size:1.1rem;color:#aaa;margin-bottom:8px}
 .dz small{color:#666}
-#vw{display:none;position:relative;background:#000;border-radius:12px;overflow:hidden;margin-bottom:8px}
-#vid{width:100%;display:block}
+#vw{display:none;position:relative;background:#000;border-radius:12px;overflow:hidden;margin-bottom:16px}
+#vid{width:100%;display:block;cursor:crosshair}
 #cv{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
-.pbar-wrap{display:none;width:100%;height:10px;background:#2a2a4a;border-radius:5px;cursor:pointer;margin-bottom:12px}
-.pbar{height:10px;background:#00d4aa;border-radius:5px;pointer-events:none}
-.ctrl{display:none;align-items:center;gap:12px;padding:16px;background:#16213e;border-radius:10px;margin-bottom:16px;flex-wrap:wrap}
+.ctrl{display:none;align-items:center;gap:16px;padding:16px;background:#16213e;border-radius:10px;margin-bottom:16px;flex-wrap:wrap}
 .bn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:.95rem;font-weight:600;transition:all .2s}
 .bg{background:#00d4aa;color:#1a1a2e}.bg:hover{background:#00f5c4}
 .bd{background:#0f3460;color:#e0e0e0;border:1px solid #444}.bd:hover{border-color:#00d4aa}
-.by{background:#f39c12;color:#1a1a2e}.by:hover{background:#f5b942}
 .bs{background:#0f3460;color:#e0e0e0;border:1px solid #444;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:.85rem;font-weight:600;transition:all .2s}
 .bs:hover{border-color:#00d4aa;color:#00d4aa}
 .bs.ak{background:#00d4aa;color:#1a1a2e;border-color:#00d4aa}
-.ib{display:flex;gap:16px;align-items:center;font-size:.9rem;color:#aaa;margin-left:auto;flex-wrap:wrap}
-.iv{color:#00d4aa;font-weight:700}
-.hint{font-size:.8rem;color:#555;text-align:center;padding:6px;display:none}
-.kl{background:#16213e;border-radius:10px;padding:16px;max-height:160px;overflow-y:auto;margin-bottom:16px;display:none}
+.ib{display:flex;gap:20px;align-items:center;font-size:.9rem;color:#aaa;margin-left:auto}
+.iv{color:#00d4aa;font-weight:700;font-size:1.05rem}
+.ht{font-size:.8rem;color:#555;text-align:center;padding:8px;display:none}
+.kl{background:#16213e;border-radius:10px;padding:16px;max-height:180px;overflow-y:auto;margin-bottom:16px;display:none}
 .kl h3{color:#00d4aa;margin-bottom:8px;font-size:.9rem}
-.ki{font-size:.8rem;color:#aaa;padding:4px 6px;border-bottom:1px solid #2a2a4a;cursor:pointer;border-radius:4px;transition:all .15s}
-.ki:hover{background:#0f3460}
-.ki.ak{background:#0a2a1a;color:#00d4aa;border-left:3px solid #00d4aa}
-#dl{width:100%;padding:14px;font-size:1.05rem;display:none;border-radius:10px;border:none;cursor:pointer;background:#00d4aa;color:#1a1a2e;font-weight:700;margin-top:4px}
+.ki{font-size:.8rem;color:#aaa;padding:3px 0;border-bottom:1px solid #2a2a4a}
+#dl{width:100%;padding:14px;font-size:1.05rem;display:none;border-radius:10px;border:none;cursor:pointer;background:#00d4aa;color:#1a1a2e;font-weight:700;margin-top:8px}
 #dl:hover{background:#00f5c4}
-.banner{display:none;background:#0a2a1a;border:1px solid #00d4aa;border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:.9rem;color:#00d4aa;text-align:center}
-.dz-json{border:2px dashed #f39c12;border-radius:10px;padding:20px;text-align:center;cursor:pointer;margin-bottom:16px;background:#16213e;transition:all .3s;display:none}
-.dz-json:hover,.dz-json.ov{background:#2c1a0e}
-.dz-json p{color:#f39c12;margin-bottom:4px;font-size:.95rem}
-.dz-json small{color:#666;font-size:.8rem}
 </style>
 </head>
 <body>
@@ -52,163 +42,58 @@ nav a:hover{border-color:#00d4aa;color:#00d4aa}
   <a href="statistiken.html">Statistiken</a>
 </nav>
 <div class="c">
-
   <div class="dz" id="dz">
     <p>Video hier reinziehen</p>
     <small>oder klicken zum Auswaehlen (MP4)</small>
-    <input type="file" id="fi" style="display:none">
+    <input type="file" id="fi" accept="video/*" style="display:none">
   </div>
-
-  <div class="dz-json" id="dzJson">
-    <p>Vorherige JSON laden (optional) - fuer Replay einer alten Session</p>
-    <small>kreise_manuell.json hier reinziehen oder klicken</small>
-    <input type="file" id="fiJson" accept=".json" style="display:none">
-  </div>
-
-  <div id="vw">
-    <video id="vid" playsinline></video>
-    <canvas id="cv"></canvas>
-  </div>
-
-  <div class="pbar-wrap" id="pw">
-    <div class="pbar" id="pb2" style="width:0%"></div>
-  </div>
-
-  <div class="banner" id="banner">
-    Replay-Modus aktiv - Kreise werden zum annotierten Zeitpunkt angezeigt. In der Liste klicken um zum Zeitpunkt zu springen.
-  </div>
-
+  <div id="vw"><video id="vid" playsinline></video><canvas id="cv"></canvas></div>
   <div class="ctrl" id="ctrl">
-    <button class="bn bg" id="playBtn">Play</button>
+    <button class="bn bg" id="pb">Play</button>
     <button class="bn bd" id="rb">Reset</button>
-    <button class="bn by" id="replayBtn" style="display:none" onclick="toggleReplay()">Replay ansehen</button>
     <div style="display:flex;gap:6px;align-items:center">
       <span style="font-size:.8rem;color:#888">Speed:</span>
-      <button class="bs" onclick="setSpeed(0.25,this)">0.25x</button>
-      <button class="bs" onclick="setSpeed(0.5,this)">0.5x</button>
-      <button class="bs ak" onclick="setSpeed(1,this)">1x</button>
-      <button class="bs" onclick="setSpeed(1.5,this)">1.5x</button>
-      <button class="bs" onclick="setSpeed(2,this)">2x</button>
+      <button class="bs" data-speed="0.25" onclick="setSpeed(0.25,this)">0.25x</button>
+      <button class="bs" data-speed="0.5" onclick="setSpeed(0.5,this)">0.5x</button>
+      <button class="bs ak" data-speed="1" onclick="setSpeed(1,this)">1x</button>
+      <button class="bs" data-speed="1.5" onclick="setSpeed(1.5,this)">1.5x</button>
+      <button class="bs" data-speed="2" onclick="setSpeed(2,this)">2x</button>
     </div>
     <div class="ib">
-      <div>t=<span class="iv" id="td">0.00s</span></div>
+      <div>t=<span class="iv" id="td">0s</span></div>
       <div>Klicks: <span class="iv" id="cc">0</span></div>
+      <div>Zuletzt: <span class="iv" id="lp">-</span></div>
     </div>
   </div>
-
-  <p class="hint" id="hint">Leertaste = Play/Pause | Klick ins Video = Kreis setzen</p>
-
-  <div class="kl" id="kl">
-    <h3 id="klTitle">Klicks</h3>
-    <div id="ki"></div>
-  </div>
-
+  <p class="ht" id="ht">Leertaste = Pause/Play | Mausklick = Kreis annotieren</p>
+  <div class="kl" id="kl"><h3>Letzte Klicks</h3><div id="ki"></div></div>
   <button id="dl">JSON herunterladen (0 Klicks)</button>
-
 </div>
 <script>
 const VW=1920,VH=1080,klicks=[],flash=[];
-let speedFactor=1,replayModus=false;
+let speedFactor=1;
 const vid=document.getElementById('vid'),cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+function ort(x,y){const c=x<VW/3?'links':(x<2*VW/3?'mitte':'rechts'),r=y<VH/3?'oben':(y<2*VH/3?'mitte':'unten');if(r==='mitte'&&c==='mitte')return 'zentrum';if(r==='mitte')return c;return r+'-'+c;}
 function g(id){return document.getElementById(id)}
-function ort(x,y){
-  const c=x<VW/3?'links':(x<2*VW/3?'mitte':'rechts');
-  const r=y<VH/3?'oben':(y<2*VH/3?'mitte':'unten');
-  if(r==='mitte'&&c==='mitte')return 'zentrum';
-  if(r==='mitte')return c;
-  return r+'-'+c;
-}
-
-const dz=g('dz');
-g('fi').onchange=e=>{if(e.target.files[0])loadVid(e.target.files[0])};
-dz.onclick=()=>g('fi').click();
-dz.ondragover=e=>{e.preventDefault();dz.classList.add('ov')};
-dz.ondragleave=()=>dz.classList.remove('ov');
-dz.ondrop=e=>{e.preventDefault();dz.classList.remove('ov');if(e.dataTransfer.files[0])loadVid(e.dataTransfer.files[0])};
-
-function loadVid(f){
-  vid.src=URL.createObjectURL(f);
-  g('vw').style.display='block';
-  g('pw').style.display='block';
-  g('ctrl').style.display='flex';
-  g('hint').style.display='block';
-  g('dz').style.display='none';
-  g('dzJson').style.display='block';
-  vid.style.cursor='crosshair';
-}
-
-const dzJson=g('dzJson');
-g('fiJson').onchange=e=>{if(e.target.files[0])loadJson(e.target.files[0])};
-dzJson.onclick=()=>g('fiJson').click();
-dzJson.ondragover=e=>{e.preventDefault();dzJson.classList.add('ov')};
-dzJson.ondragleave=()=>dzJson.classList.remove('ov');
-dzJson.ondrop=e=>{e.preventDefault();dzJson.classList.remove('ov');if(e.dataTransfer.files[0])loadJson(e.dataTransfer.files[0])};
-
-function loadJson(f){
-  const r=new FileReader();
-  r.onload=e=>{
-    try{
-      const data=JSON.parse(e.target.result);
-      klicks.length=0;flash.length=0;
-      (data.kreise||[]).forEach(k=>klicks.push({...k}));
-      g('dzJson').style.display='none';
-      ui();
-      if(klicks.length>0&&!replayModus)toggleReplay();
-    }catch(err){alert('Ungueltige JSON Datei');}
-  };
-  r.readAsText(f);
-}
-
-vid.onloadedmetadata=()=>{cv.width=vid.videoWidth;cv.height=vid.videoHeight};
-
-g('pw').onclick=e=>{
-  const r=g('pw').getBoundingClientRect();
-  vid.currentTime=(e.clientX-r.left)/r.width*vid.duration;
-};
-
-g('playBtn').onclick=()=>togglePlay();
-document.onkeydown=e=>{if(e.code==='Space'&&g('vw').style.display!=='none'){e.preventDefault();togglePlay();}};
-function togglePlay(){
-  if(vid.paused){vid.play();g('playBtn').textContent='Pause';}
-  else{vid.pause();g('playBtn').textContent='Play';}
-}
-
-g('rb').onclick=()=>{
-  if(confirm('Alle Klicks loeschen?')){
-    klicks.length=0;flash.length=0;
-    if(replayModus)toggleReplay();
-    ui();
-  }
-};
-
+function load(f){vid.src=URL.createObjectURL(f);g('vw').style.display='block';g('ctrl').style.display='flex';g('ht').style.display='block';g('dz').style.display='none';}
 function setSpeed(f,btn){
-  speedFactor=f;vid.playbackRate=f;
+  speedFactor=f;
+  vid.playbackRate=f;
   document.querySelectorAll('.bs').forEach(b=>b.classList.remove('ak'));
   btn.classList.add('ak');
 }
-
-function toggleReplay(){
-  replayModus=!replayModus;
-  if(replayModus){
-    g('replayBtn').textContent='Annotier-Modus';
-    g('replayBtn').className='bn bd';
-    g('banner').style.display='block';
-    g('hint').textContent='Leertaste = Play/Pause | Fortschrittsleiste klicken = Springen';
-    vid.style.cursor='default';
-    g('klTitle').textContent='Klicks (anklicken = zum Zeitpunkt springen)';
-  } else {
-    g('replayBtn').textContent='Replay ansehen';
-    g('replayBtn').className='bn by';
-    g('banner').style.display='none';
-    g('hint').textContent='Leertaste = Play/Pause | Klick ins Video = Kreis setzen';
-    vid.style.cursor='crosshair';
-    g('klTitle').textContent='Klicks';
-  }
-  ui();
-}
-
+const dz=g('dz');
+g('fi').onchange=e=>{if(e.target.files[0])load(e.target.files[0])};
+dz.onclick=()=>g('fi').click();
+dz.ondragover=e=>{e.preventDefault();dz.classList.add('ov')};
+dz.ondragleave=()=>dz.classList.remove('ov');
+dz.ondrop=e=>{e.preventDefault();dz.classList.remove('ov');if(e.dataTransfer.files[0])load(e.dataTransfer.files[0])};
+vid.onloadedmetadata=()=>{cv.width=vid.videoWidth;cv.height=vid.videoHeight};
+vid.ontimeupdate=()=>{g('td').textContent=vid.currentTime.toFixed(2)+'s';draw()};
+g('pb').onclick=()=>{if(vid.paused){vid.play();g('pb').textContent='Pause';}else{vid.pause();g('pb').textContent='Play';}};
+g('rb').onclick=()=>{if(confirm('Alle Klicks loeschen?')){klicks.length=0;flash.length=0;ui();}};
+document.onkeydown=e=>{if(e.code==='Space'&&g('vw').style.display!=='none'){e.preventDefault();if(vid.paused){vid.play();g('pb').textContent='Pause';}else{vid.pause();g('pb').textContent='Play';}}};
 vid.onclick=e=>{
-  if(replayModus)return;
   const r=vid.getBoundingClientRect();
   const x=Math.round((e.clientX-r.left)*(vid.videoWidth/r.width));
   const y=Math.round((e.clientY-r.top)*(vid.videoHeight/r.height));
@@ -219,20 +104,35 @@ vid.onclick=e=>{
   flash.push({x,y,t:Date.now()});
   ui();
 };
-
-vid.ontimeupdate=()=>{
-  const t=vid.currentTime;
-  g('td').textContent=t.toFixed(2)+'s';
-  if(vid.duration>0)g('pb2').style.width=(t/vid.duration*100)+'%';
-  draw(t);
-  if(replayModus)updateList(t);
-};
-
-function draw(t){
+function draw(){
   const now=Date.now();
   ctx.clearRect(0,0,cv.width,cv.height);
-  if(replayModus){
-    klicks.forEach(k=>{
-      const diff=Math.abs(k.timestamp_s-t);
-      if(diff<0.7){
-        const a=1-(diff/0.
+  flash.filter(m=>now-m.t<1500).forEach(m=>{
+    const a=1-(now-m.t)/1500;
+    ctx.strokeStyle='rgba(0,212,170,'+a+')';ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(m.x,m.y,30,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(m.x-22,m.y);ctx.lineTo(m.x+22,m.y);ctx.moveTo(m.x,m.y-22);ctx.lineTo(m.x,m.y+22);ctx.stroke();
+  });
+  klicks.slice(-8).forEach(k=>{ctx.fillStyle='rgba(255,140,0,.7)';ctx.beginPath();ctx.arc(k.x,k.y,6,0,Math.PI*2);ctx.fill()});
+}
+function ui(){
+  g('cc').textContent=klicks.length;
+  g('dl').textContent='JSON herunterladen ('+klicks.length+' Klicks)';
+  g('dl').style.display=klicks.length>0?'block':'none';
+  g('kl').style.display=klicks.length>0?'block':'none';
+  if(klicks.length>0){const l=klicks[klicks.length-1];g('lp').textContent=l.ort;const d=g('ki'),i=document.createElement('div');i.className='ki';i.textContent='#'+l.nr+' t='+l.timestamp_s+'s x='+l.x+' y='+l.y+' - '+l.ort;d.insertBefore(i,d.firstChild);if(d.children.length>20)d.removeChild(d.lastChild);}
+}
+g('dl').onclick=()=>{
+  const skaliert=klicks.map(k=>({...k,
+    timestamp_s:parseFloat((k.timestamp_s*speedFactor).toFixed(3)),
+    timestamp_ms:parseFloat((k.timestamp_s*speedFactor*1000).toFixed(1)),
+    dauer_bis_naechster_s:k.dauer_bis_naechster_s!=null?parseFloat((k.dauer_bis_naechster_s*speedFactor).toFixed(3)):null
+  }));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify({video:'video.mp4',klicks_gesamt:klicks.length,speed_factor:speedFactor,kreise:skaliert},null,2)],{type:'application/json'}));
+  a.download='kreise_manuell.json';a.click();
+};
+setInterval(draw,50);
+</script>
+</body>
+</html>
