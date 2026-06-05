@@ -23,6 +23,7 @@ nav a:hover{border-color:#00d4aa;color:#00d4aa}
 .bn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:.95rem;font-weight:600;transition:all .2s}
 .bg{background:#00d4aa;color:#1a1a2e}.bg:hover{background:#00f5c4}
 .bd{background:#0f3460;color:#e0e0e0;border:1px solid #444}.bd:hover{border-color:#00d4aa}
+.br{background:#c0392b;color:#fff;border:1px solid #c0392b}.br:hover{background:#e74c3c}
 .bs{background:#0f3460;color:#e0e0e0;border:1px solid #444;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:.85rem;font-weight:600;transition:all .2s}
 .bs:hover{border-color:#00d4aa;color:#00d4aa}
 .bs.ak{background:#00d4aa;color:#1a1a2e;border-color:#00d4aa}
@@ -31,26 +32,39 @@ nav a:hover{border-color:#00d4aa;color:#00d4aa}
 .ht{font-size:.8rem;color:#555;text-align:center;padding:8px;display:none}
 .kl{background:#16213e;border-radius:10px;padding:16px;max-height:180px;overflow-y:auto;margin-bottom:16px;display:none}
 .kl h3{color:#00d4aa;margin-bottom:8px;font-size:.9rem}
-.ki{font-size:.8rem;color:#aaa;padding:3px 0;border-bottom:1px solid #2a2a4a}
+.ki{font-size:.8rem;color:#aaa;padding:3px 0;border-bottom:1px solid #2a2a4a;cursor:pointer;transition:background .15s}
+.ki:hover{background:#0f3460;border-radius:4px;padding-left:6px}
 #dl{width:100%;padding:14px;font-size:1.05rem;display:none;border-radius:10px;border:none;cursor:pointer;background:#00d4aa;color:#1a1a2e;font-weight:700;margin-top:8px}
 #dl:hover{background:#00f5c4}
+.dz2{border:2px dashed #444;border-radius:10px;padding:24px;text-align:center;cursor:pointer;margin-bottom:16px;background:#16213e;transition:all .3s;display:none}
+.dz2:hover,.dz2.ov{border-color:#f39c12;background:#2c1810}
+.dz2 p{font-size:.95rem;color:#f39c12;margin-bottom:4px}
+.dz2 small{color:#666}
+.replay-info{background:#16213e;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:none;border-left:3px solid #f39c12;font-size:.85rem;color:#aaa}
+.replay-info span{color:#f39c12;font-weight:700}
+.modebadge{font-size:.75rem;padding:4px 10px;border-radius:12px;font-weight:700;margin-left:8px}
+.modebadge.ann{background:#00d4aa;color:#1a1a2e}
+.modebadge.rep{background:#f39c12;color:#1a1a2e}
 </style>
 </head>
 <body>
 <nav>
-  <h1>Eye-Tracking Annotator</h1>
+  <h1>Eye-Tracking Annotator <span class="modebadge ann" id="modebadge">ANNOTIEREN</span></h1>
   <a href="statistiken.html">Statistiken</a>
 </nav>
 <div class="c">
   <div class="dz" id="dz">
     <p>Video hier reinziehen</p>
     <small>oder klicken zum Auswaehlen (MP4)</small>
-    <input type="file" id="fi" style="display:none">
+    <input type="file" id="fi" accept="video/*" style="display:none">
   </div>
+
   <div id="vw"><video id="vid" playsinline></video><canvas id="cv"></canvas></div>
+
   <div class="ctrl" id="ctrl">
     <button class="bn bg" id="pb">Play</button>
     <button class="bn bd" id="rb">Reset</button>
+    <button class="bn bd" id="modeBtn" onclick="toggleMode()">Replay-Modus</button>
     <div style="display:flex;gap:6px;align-items:center">
       <span style="font-size:.8rem;color:#888">Speed:</span>
       <button class="bs" data-speed="0.25" onclick="setSpeed(0.25,this)">0.25x</button>
@@ -65,23 +79,93 @@ nav a:hover{border-color:#00d4aa;color:#00d4aa}
       <div>Zuletzt: <span class="iv" id="lp">-</span></div>
     </div>
   </div>
+
   <p class="ht" id="ht">Leertaste = Pause/Play | Mausklick = Kreis annotieren</p>
-  <div class="kl" id="kl"><h3>Letzte Klicks</h3><div id="ki"></div></div>
+
+  <div class="dz2" id="dz2">
+    <p>JSON hier reinziehen um Replay zu laden</p>
+    <small>oder klicken zum Auswaehlen (kreise_manuell.json)</small>
+    <input type="file" id="fi2" accept=".json" style="display:none">
+  </div>
+
+  <div class="replay-info" id="replayInfo">
+    Replay-Modus aktiv: <span id="replayCount">0</span> Klicks geladen.
+    Klicke auf einen Eintrag in der Liste um ihn zu loeschen und neu zu setzen.
+  </div>
+
+  <div class="kl" id="kl"><h3>Klicks <span style="color:#aaa;font-size:.8rem;font-weight:400">(im Replay: klicken zum Loeschen)</span></h3><div id="ki"></div></div>
   <button id="dl">JSON herunterladen (0 Klicks)</button>
 </div>
 <script>
 const VW=1920,VH=1080,klicks=[],flash=[];
-let speedFactor=1;
+let speedFactor=1, replayModus=false, replayKlicks=[];
 const vid=document.getElementById('vid'),cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+
 function ort(x,y){const c=x<VW/3?'links':(x<2*VW/3?'mitte':'rechts'),r=y<VH/3?'oben':(y<2*VH/3?'mitte':'unten');if(r==='mitte'&&c==='mitte')return 'zentrum';if(r==='mitte')return c;return r+'-'+c;}
 function g(id){return document.getElementById(id)}
-function load(f){vid.src=URL.createObjectURL(f);g('vw').style.display='block';g('ctrl').style.display='flex';g('ht').style.display='block';g('dz').style.display='none';}
+
+function load(f){
+  vid.src=URL.createObjectURL(f);
+  g('vw').style.display='block';
+  g('ctrl').style.display='flex';
+  g('ht').style.display='block';
+  g('dz').style.display='none';
+}
+
 function setSpeed(f,btn){
   speedFactor=f;
   vid.playbackRate=f;
   document.querySelectorAll('.bs').forEach(b=>b.classList.remove('ak'));
   btn.classList.add('ak');
 }
+
+function toggleMode(){
+  replayModus=!replayModus;
+  if(replayModus){
+    g('modebadge').textContent='REPLAY';
+    g('modebadge').className='modebadge rep';
+    g('modeBtn').textContent='Annotier-Modus';
+    g('dz2').style.display='block';
+    g('replayInfo').style.display='none';
+    g('ht').textContent='Leertaste = Pause/Play | Replay-Modus: Kreise werden angezeigt';
+    vid.style.cursor='default';
+  } else {
+    g('modebadge').textContent='ANNOTIEREN';
+    g('modebadge').className='modebadge ann';
+    g('modeBtn').textContent='Replay-Modus';
+    g('dz2').style.display='none';
+    g('replayInfo').style.display='none';
+    g('ht').textContent='Leertaste = Pause/Play | Mausklick = Kreis annotieren';
+    vid.style.cursor='crosshair';
+  }
+}
+
+// JSON Replay laden
+const dz2=g('dz2');
+g('fi2').onchange=e=>{if(e.target.files[0])loadJSON(e.target.files[0])};
+dz2.onclick=()=>g('fi2').click();
+dz2.ondragover=e=>{e.preventDefault();dz2.classList.add('ov')};
+dz2.ondragleave=()=>dz2.classList.remove('ov');
+dz2.ondrop=e=>{e.preventDefault();dz2.classList.remove('ov');if(e.dataTransfer.files[0])loadJSON(e.dataTransfer.files[0])};
+
+function loadJSON(f){
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      replayKlicks=data.kreise||[];
+      klicks.length=0;
+      replayKlicks.forEach(k=>klicks.push({...k}));
+      g('dz2').style.display='none';
+      g('replayInfo').style.display='block';
+      g('replayCount').textContent=klicks.length;
+      ui();
+    }catch(err){alert('Ungueltige JSON-Datei');}
+  };
+  r.readAsText(f);
+}
+
+// Video laden
 const dz=g('dz');
 g('fi').onchange=e=>{if(e.target.files[0])load(e.target.files[0])};
 dz.onclick=()=>g('fi').click();
@@ -90,10 +174,20 @@ dz.ondragleave=()=>dz.classList.remove('ov');
 dz.ondrop=e=>{e.preventDefault();dz.classList.remove('ov');if(e.dataTransfer.files[0])load(e.dataTransfer.files[0])};
 vid.onloadedmetadata=()=>{cv.width=vid.videoWidth;cv.height=vid.videoHeight};
 vid.ontimeupdate=()=>{g('td').textContent=vid.currentTime.toFixed(2)+'s';draw()};
+
 g('pb').onclick=()=>{if(vid.paused){vid.play();g('pb').textContent='Pause';}else{vid.pause();g('pb').textContent='Play';}};
-g('rb').onclick=()=>{if(confirm('Alle Klicks loeschen?')){klicks.length=0;flash.length=0;ui();}};
-document.onkeydown=e=>{if(e.code==='Space'&&g('vw').style.display!=='none'){e.preventDefault();if(vid.paused){vid.play();g('pb').textContent='Pause';}else{vid.pause();g('pb').textContent='Play';}}};
+g('rb').onclick=()=>{if(confirm('Alle Klicks loeschen?')){klicks.length=0;flash.length=0;replayKlicks=[];g('replayInfo').style.display='none';ui();}};
+
+document.onkeydown=e=>{
+  if(e.code==='Space'&&g('vw').style.display!=='none'){
+    e.preventDefault();
+    if(vid.paused){vid.play();g('pb').textContent='Pause';}
+    else{vid.pause();g('pb').textContent='Play';}
+  }
+};
+
 vid.onclick=e=>{
+  if(replayModus) return; // im Replay-Modus kein Annotieren
   const r=vid.getBoundingClientRect();
   const x=Math.round((e.clientX-r.left)*(vid.videoWidth/r.width));
   const y=Math.round((e.clientY-r.top)*(vid.videoHeight/r.height));
@@ -104,35 +198,11 @@ vid.onclick=e=>{
   flash.push({x,y,t:Date.now()});
   ui();
 };
+
 function draw(){
   const now=Date.now();
   ctx.clearRect(0,0,cv.width,cv.height);
-  flash.filter(m=>now-m.t<1500).forEach(m=>{
-    const a=1-(now-m.t)/1500;
-    ctx.strokeStyle='rgba(0,212,170,'+a+')';ctx.lineWidth=3;
-    ctx.beginPath();ctx.arc(m.x,m.y,30,0,Math.PI*2);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(m.x-22,m.y);ctx.lineTo(m.x+22,m.y);ctx.moveTo(m.x,m.y-22);ctx.lineTo(m.x,m.y+22);ctx.stroke();
-  });
-  klicks.slice(-8).forEach(k=>{ctx.fillStyle='rgba(255,140,0,.7)';ctx.beginPath();ctx.arc(k.x,k.y,6,0,Math.PI*2);ctx.fill()});
-}
-function ui(){
-  g('cc').textContent=klicks.length;
-  g('dl').textContent='JSON herunterladen ('+klicks.length+' Klicks)';
-  g('dl').style.display=klicks.length>0?'block':'none';
-  g('kl').style.display=klicks.length>0?'block':'none';
-  if(klicks.length>0){const l=klicks[klicks.length-1];g('lp').textContent=l.ort;const d=g('ki'),i=document.createElement('div');i.className='ki';i.textContent='#'+l.nr+' t='+l.timestamp_s+'s x='+l.x+' y='+l.y+' - '+l.ort;d.insertBefore(i,d.firstChild);if(d.children.length>20)d.removeChild(d.lastChild);}
-}
-g('dl').onclick=()=>{
-  const skaliert=klicks.map(k=>({...k,
-    timestamp_s:parseFloat((k.timestamp_s*speedFactor).toFixed(3)),
-    timestamp_ms:parseFloat((k.timestamp_s*speedFactor*1000).toFixed(1)),
-    dauer_bis_naechster_s:k.dauer_bis_naechster_s!=null?parseFloat((k.dauer_bis_naechster_s*speedFactor).toFixed(3)):null
-  }));
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([JSON.stringify({video:'video.mp4',klicks_gesamt:klicks.length,speed_factor:speedFactor,kreise:skaliert},null,2)],{type:'application/json'}));
-  a.download='kreise_manuell.json';a.click();
-};
-setInterval(draw,50);
-</script>
-</body>
-</html>
+
+  if(replayModus && klicks.length>0){
+    // Replay: zeige Kreis zum aktuellen Zeitpunkt (naechster Klick innerhalb 0.8
+
