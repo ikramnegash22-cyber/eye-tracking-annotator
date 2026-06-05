@@ -1,3 +1,10 @@
+Der Replay-Button erscheint erst nachdem du mindestens einen Klick gesetzt hast - er ist am Anfang versteckt.
+
+Aber ich glaube das Problem ist dass du den neuen Code noch gar nicht eingefuegt hast! Der Code den ich dir zuletzt gegeben habe war unvollstaendig (abgeschnitten).
+
+Hier nochmal der KOMPLETTE annotator.html - diesmal vollstaendig:
+
+```html
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -20,12 +27,12 @@ nav a:hover{border-color:#00d4aa;color:#00d4aa}
 #vid{width:100%;display:block}
 #cv{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
 .pbar-wrap{display:none;width:100%;height:10px;background:#2a2a4a;border-radius:5px;cursor:pointer;margin-bottom:12px}
-.pbar{height:10px;background:#00d4aa;border-radius:5px;pointer-events:none;transition:width .1s}
+.pbar{height:10px;background:#00d4aa;border-radius:5px;pointer-events:none}
 .ctrl{display:none;align-items:center;gap:12px;padding:16px;background:#16213e;border-radius:10px;margin-bottom:16px;flex-wrap:wrap}
 .bn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:.95rem;font-weight:600;transition:all .2s}
 .bg{background:#00d4aa;color:#1a1a2e}.bg:hover{background:#00f5c4}
 .bd{background:#0f3460;color:#e0e0e0;border:1px solid #444}.bd:hover{border-color:#00d4aa}
-.by{background:#f39c12;color:#1a1a2e;border:none}.by:hover{background:#f5b942}
+.by{background:#f39c12;color:#1a1a2e}.by:hover{background:#f5b942}
 .bs{background:#0f3460;color:#e0e0e0;border:1px solid #444;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:.85rem;font-weight:600;transition:all .2s}
 .bs:hover{border-color:#00d4aa;color:#00d4aa}
 .bs.ak{background:#00d4aa;color:#1a1a2e;border-color:#00d4aa}
@@ -34,12 +41,16 @@ nav a:hover{border-color:#00d4aa;color:#00d4aa}
 .hint{font-size:.8rem;color:#555;text-align:center;padding:6px;display:none}
 .kl{background:#16213e;border-radius:10px;padding:16px;max-height:160px;overflow-y:auto;margin-bottom:16px;display:none}
 .kl h3{color:#00d4aa;margin-bottom:8px;font-size:.9rem}
-.ki{font-size:.8rem;color:#aaa;padding:4px 6px;border-bottom:1px solid #2a2a4a;cursor:pointer;border-radius:4px;transition:all .15s;display:flex;gap:8px;align-items:center}
+.ki{font-size:.8rem;color:#aaa;padding:4px 6px;border-bottom:1px solid #2a2a4a;cursor:pointer;border-radius:4px;transition:all .15s}
 .ki:hover{background:#0f3460}
-.ki.replay-aktiv{background:#1a3a1a;color:#00d4aa;border-left:3px solid #00d4aa}
+.ki.ak{background:#0a2a1a;color:#00d4aa;border-left:3px solid #00d4aa}
 #dl{width:100%;padding:14px;font-size:1.05rem;display:none;border-radius:10px;border:none;cursor:pointer;background:#00d4aa;color:#1a1a2e;font-weight:700;margin-top:4px}
 #dl:hover{background:#00f5c4}
-.mode-banner{display:none;background:#1a3a0a;border:1px solid #00d4aa;border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:.9rem;color:#00d4aa;text-align:center}
+.banner{display:none;background:#0a2a1a;border:1px solid #00d4aa;border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:.9rem;color:#00d4aa;text-align:center}
+.dz-json{border:2px dashed #444;border-radius:10px;padding:20px;text-align:center;cursor:pointer;margin-bottom:16px;background:#16213e;transition:all .3s;display:none}
+.dz-json:hover,.dz-json.ov{border-color:#f39c12;background:#2c1a0e}
+.dz-json p{color:#f39c12;margin-bottom:4px}
+.dz-json small{color:#666;font-size:.8rem}
 </style>
 </head>
 <body>
@@ -55,6 +66,12 @@ nav a:hover{border-color:#00d4aa;color:#00d4aa}
     <input type="file" id="fi" accept="video/*" style="display:none">
   </div>
 
+  <div class="dz-json" id="dzJson">
+    <p>JSON laden (optional) - fuer Replay einer frueheren Session</p>
+    <small>kreise_manuell.json hier reinziehen oder klicken</small>
+    <input type="file" id="fiJson" accept=".json" style="display:none">
+  </div>
+
   <div id="vw">
     <video id="vid" playsinline></video>
     <canvas id="cv"></canvas>
@@ -64,15 +81,15 @@ nav a:hover{border-color:#00d4aa;color:#00d4aa}
     <div class="pbar" id="pb2" style="width:0%"></div>
   </div>
 
-  <div class="mode-banner" id="modeBanner">
-    Replay-Modus aktiv - Video zeigt annotierte Kreise. Klicke auf einen Kreis in der Liste um zum Zeitpunkt zu springen.
+  <div class="banner" id="banner">
+    Replay-Modus: Kreise werden zum annotierten Zeitpunkt angezeigt. Klicke in der Liste auf einen Eintrag um dorthin zu springen.
   </div>
 
   <div class="ctrl" id="ctrl">
     <button class="bn bg" id="playBtn">Play</button>
     <button class="bn bd" id="rb">Reset</button>
     <button class="bn by" id="replayBtn" style="display:none" onclick="toggleReplay()">Replay ansehen</button>
-    <div style="display:flex;gap:6px;align-items:center" id="speedDiv">
+    <div style="display:flex;gap:6px;align-items:center">
       <span style="font-size:.8rem;color:#888">Speed:</span>
       <button class="bs" onclick="setSpeed(0.25,this)">0.25x</button>
       <button class="bs" onclick="setSpeed(0.5,this)">0.5x</button>
@@ -82,14 +99,14 @@ nav a:hover{border-color:#00d4aa;color:#00d4aa}
     </div>
     <div class="ib">
       <div>t=<span class="iv" id="td">0.00s</span></div>
-      <div id="ccDiv">Klicks: <span class="iv" id="cc">0</span></div>
+      <div>Klicks: <span class="iv" id="cc">0</span></div>
     </div>
   </div>
 
   <p class="hint" id="hint">Leertaste = Play/Pause | Klick ins Video = Kreis setzen</p>
 
   <div class="kl" id="kl">
-    <h3 id="klTitle">Letzte Klicks</h3>
+    <h3 id="klTitle">Klicks</h3>
     <div id="ki"></div>
   </div>
 
@@ -97,40 +114,52 @@ nav a:hover{border-color:#00d4aa;color:#00d4aa}
 
 </div>
 <script>
-const VW=1920, VH=1080;
-const klicks=[], flash=[];
-let speedFactor=1, replayModus=false;
-
-const vid=document.getElementById('vid');
-const cv=document.getElementById('cv');
-const ctx=cv.getContext('2d');
+const VW=1920,VH=1080,klicks=[],flash=[];
+let speedFactor=1,replayModus=false;
+const vid=document.getElementById('vid'),cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 function g(id){return document.getElementById(id)}
-
-// Ort berechnen
-function ort(x,y){
-  const c=x<VW/3?'links':(x<2*VW/3?'mitte':'rechts');
-  const r=y<VH/3?'oben':(y<2*VH/3?'mitte':'unten');
-  if(r==='mitte'&&c==='mitte')return 'zentrum';
-  if(r==='mitte')return c;
-  return r+'-'+c;
-}
+function ort(x,y){const c=x<VW/3?'links':(x<2*VW/3?'mitte':'rechts'),r=y<VH/3?'oben':(y<2*VH/3?'mitte':'unten');if(r==='mitte'&&c==='mitte')return'zentrum';if(r==='mitte')return c;return r+'-'+c;}
 
 // Video laden
 const dz=g('dz');
-g('fi').onchange=e=>{if(e.target.files[0])loadVideo(e.target.files[0])};
+g('fi').onchange=e=>{if(e.target.files[0])loadVid(e.target.files[0])};
 dz.onclick=()=>g('fi').click();
 dz.ondragover=e=>{e.preventDefault();dz.classList.add('ov')};
 dz.ondragleave=()=>dz.classList.remove('ov');
-dz.ondrop=e=>{e.preventDefault();dz.classList.remove('ov');if(e.dataTransfer.files[0])loadVideo(e.dataTransfer.files[0])};
+dz.ondrop=e=>{e.preventDefault();dz.classList.remove('ov');if(e.dataTransfer.files[0])loadVid(e.dataTransfer.files[0])};
 
-function loadVideo(f){
+function loadVid(f){
   vid.src=URL.createObjectURL(f);
   g('vw').style.display='block';
   g('pw').style.display='block';
   g('ctrl').style.display='flex';
   g('hint').style.display='block';
   g('dz').style.display='none';
+  g('dzJson').style.display='block';
   vid.style.cursor='crosshair';
+}
+
+// JSON laden (fuer Replay alter Daten)
+const dzJson=g('dzJson');
+g('fiJson').onchange=e=>{if(e.target.files[0])loadJson(e.target.files[0])};
+dzJson.onclick=()=>g('fiJson').click();
+dzJson.ondragover=e=>{e.preventDefault();dzJson.classList.add('ov')};
+dzJson.ondragleave=()=>dzJson.classList.remove('ov');
+dzJson.ondrop=e=>{e.preventDefault();dzJson.classList.remove('ov');if(e.dataTransfer.files[0])loadJson(e.dataTransfer.files[0])};
+
+function loadJson(f){
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      klicks.length=0;flash.length=0;
+      (data.kreise||[]).forEach(k=>klicks.push({...k}));
+      g('dzJson').style.display='none';
+      ui();
+      if(klicks.length>0&&!replayModus) toggleReplay();
+    }catch(err){alert('Ungueltige JSON Datei');}
+  };
+  r.readAsText(f);
 }
 
 vid.onloadedmetadata=()=>{cv.width=vid.videoWidth;cv.height=vid.videoHeight};
@@ -143,9 +172,7 @@ g('pw').onclick=e=>{
 
 // Play/Pause
 g('playBtn').onclick=()=>togglePlay();
-document.onkeydown=e=>{
-  if(e.code==='Space'&&g('vw').style.display!=='none'){e.preventDefault();togglePlay();}
-};
+document.onkeydown=e=>{if(e.code==='Space'&&g('vw').style.display!=='none'){e.preventDefault();togglePlay();}};
 function togglePlay(){
   if(vid.paused){vid.play();g('playBtn').textContent='Pause';}
   else{vid.pause();g('playBtn').textContent='Play';}
@@ -155,94 +182,55 @@ function togglePlay(){
 g('rb').onclick=()=>{
   if(confirm('Alle Klicks loeschen?')){
     klicks.length=0;flash.length=0;
-    if(replayModus) toggleReplay();
+    if(replayModus)toggleReplay();
     ui();
   }
 };
 
 // Speed
 function setSpeed(f,btn){
-  speedFactor=f;
-  vid.playbackRate=f;
+  speedFactor=f;vid.playbackRate=f;
   document.querySelectorAll('.bs').forEach(b=>b.classList.remove('ak'));
   btn.classList.add('ak');
 }
 
-// Klick ins Video
-vid.onclick=e=>{
-  if(replayModus) return;
-  const r=vid.getBoundingClientRect();
-  const x=Math.round((e.clientX-r.left)*(vid.videoWidth/r.width));
-  const y=Math.round((e.clientY-r.top)*(vid.videoHeight/r.height));
-  const ts=parseFloat(vid.currentTime.toFixed(3));
-  const nr=klicks.length+1;
-  if(klicks.length>0)
-    klicks[klicks.length-1].dauer_bis_naechster_s=parseFloat((ts-klicks[klicks.length-1].timestamp_s).toFixed(3));
-  klicks.push({nr,x,y,ort:ort(x,y),timestamp_s:ts,timestamp_ms:parseFloat((ts*1000).toFixed(1)),dauer_bis_naechster_s:null});
-  flash.push({x,y,t:Date.now()});
-  ui();
-};
-
-// Replay Modus umschalten
+// Replay umschalten
 function toggleReplay(){
   replayModus=!replayModus;
   if(replayModus){
     g('replayBtn').textContent='Annotier-Modus';
     g('replayBtn').className='bn bd';
-    g('modeBanner').style.display='block';
-    g('hint').textContent='Leertaste = Play/Pause | Fortschrittsleiste klicken = Springen | Klick auf Eintrag = zum Zeitpunkt springen';
+    g('banner').style.display='block';
+    g('hint').textContent='Leertaste = Play/Pause | Fortschrittsleiste = Springen | Liste = zum Zeitpunkt springen';
     vid.style.cursor='default';
-    g('klTitle').textContent='Klicks (klicken zum Springen)';
+    g('klTitle').textContent='Klicks (anklicken zum Springen)';
   } else {
     g('replayBtn').textContent='Replay ansehen';
     g('replayBtn').className='bn by';
-    g('modeBanner').style.display='none';
+    g('banner').style.display='none';
     g('hint').textContent='Leertaste = Play/Pause | Klick ins Video = Kreis setzen';
     vid.style.cursor='crosshair';
-    g('klTitle').textContent='Letzte Klicks';
+    g('klTitle').textContent='Klicks';
   }
   ui();
 }
+
+// Klick ins Video (nur im Annotier-Modus)
+vid.onclick=e=>{
+  if(replayModus)return;
+  const r=vid.getBoundingClientRect();
+  const x=Math.round((e.clientX-r.left)*(vid.videoWidth/r.width));
+  const y=Math.round((e.clientY-r.top)*(vid.videoHeight/r.height));
+  const ts=parseFloat(vid.currentTime.toFixed(3));
+  const nr=klicks.length+1;
+  if(klicks.length>0)klicks[klicks.length-1].dauer_bis_naechster_s=parseFloat((ts-klicks[klicks.length-1].timestamp_s).toFixed(3));
+  klicks.push({nr,x,y,ort:ort(x,y),timestamp_s:ts,timestamp_ms:parseFloat((ts*1000).toFixed(1)),dauer_bis_naechster_s:null});
+  flash.push({x,y,t:Date.now()});
+  ui();
+};
 
 // Update
 vid.ontimeupdate=()=>{
   const t=vid.currentTime;
   g('td').textContent=t.toFixed(2)+'s';
-  if(vid.duration>0) g('pb2').style.width=(t/vid.duration*100)+'%';
-  draw(t);
-  if(replayModus) updateReplayList(t);
-};
-
-// Zeichnen
-function draw(t){
-  const now=Date.now();
-  ctx.clearRect(0,0,cv.width,cv.height);
-
-  if(replayModus){
-    // Im Replay: zeige Kreis wenn Zeitpunkt nahe ist
-    klicks.forEach(k=>{
-      const diff=Math.abs(k.timestamp_s-t);
-      if(diff<0.7){
-        const alpha=1-(diff/0.7);
-        ctx.fillStyle='rgba(0,212,170,'+alpha*0.2+')';
-        ctx.beginPath();ctx.arc(k.x,k.y,38,0,Math.PI*2);ctx.fill();
-        ctx.strokeStyle='rgba(0,212,170,'+alpha+')';
-        ctx.lineWidth=3;
-        ctx.beginPath();ctx.arc(k.x,k.y,38,0,Math.PI*2);ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(k.x-26,k.y);ctx.lineTo(k.x+26,k.y);
-        ctx.moveTo(k.x,k.y-26);ctx.lineTo(k.x,k.y+26);
-        ctx.stroke();
-        ctx.fillStyle='rgba(0,212,170,'+alpha+')';
-        ctx.font='bold 18px sans-serif';
-        ctx.fillText('#'+k.nr,k.x+42,k.y+6);
-      }
-    });
-  } else {
-    // Normaler Modus: Flash-Kreise
-    flash.filter(m=>now-m.t<1500).forEach(m=>{
-      const a=1-(now-m.t)/1500;
-      ctx.strokeStyle='rgba(0,212,170,'+a+')';ctx.lineWidth=3;
-      ctx.beginPath();ctx.arc(m.x,m.y,30,0,Math.PI*2);ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(m.x-22,m.y);ctx.lineTo(m.x+22,m.y);
+  if(vid.duration>0)g('pb2').style.width=(t/vid.
