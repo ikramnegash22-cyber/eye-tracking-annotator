@@ -238,4 +238,75 @@ function draw(t){
     klicks.forEach(k=>{
       const diff=Math.abs(k.timestamp_s-t);
       if(diff<0.7){
-        const a=1-(diff/0.
+                const a=1-(diff/0.7);
+        ctx.fillStyle='rgba(0,212,170,'+a*0.2+')';
+        ctx.beginPath();ctx.arc(k.x,k.y,38,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='rgba(0,212,170,'+a+')';ctx.lineWidth=3;
+        ctx.beginPath();ctx.arc(k.x,k.y,38,0,Math.PI*2);ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(k.x-26,k.y);ctx.lineTo(k.x+26,k.y);
+        ctx.moveTo(k.x,k.y-26);ctx.lineTo(k.x,k.y+26);
+        ctx.stroke();
+        ctx.fillStyle='rgba(0,212,170,'+a+')';
+        ctx.font='bold 18px sans-serif';
+        ctx.fillText('#'+k.nr,k.x+42,k.y+6);
+      }
+    });
+  } else {
+    flash.filter(m=>now-m.t<1500).forEach(m=>{
+      const a=1-(now-m.t)/1500;
+      ctx.strokeStyle='rgba(0,212,170,'+a+')';ctx.lineWidth=3;
+      ctx.beginPath();ctx.arc(m.x,m.y,30,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(m.x-22,m.y);ctx.lineTo(m.x+22,m.y);
+      ctx.moveTo(m.x,m.y-22);ctx.lineTo(m.x,m.y+22);
+      ctx.stroke();
+    });
+    klicks.slice(-8).forEach(k=>{
+      ctx.fillStyle='rgba(255,140,0,.7)';
+      ctx.beginPath();ctx.arc(k.x,k.y,6,0,Math.PI*2);ctx.fill();
+    });
+  }
+}
+
+function updateList(t){
+  document.querySelectorAll('.ki').forEach((el,i)=>{
+    if(klicks[i]&&Math.abs(klicks[i].timestamp_s-t)<0.7) el.classList.add('ak');
+    else el.classList.remove('ak');
+  });
+}
+
+function ui(){
+  g('cc').textContent=klicks.length;
+  g('dl').textContent='JSON herunterladen ('+klicks.length+' Klicks)';
+  g('dl').style.display=klicks.length>0?'block':'none';
+  g('kl').style.display=klicks.length>0?'block':'none';
+  g('replayBtn').style.display=klicks.length>0?'inline-block':'none';
+  if(klicks.length>0){
+    const d=g('ki');
+    d.innerHTML='';
+    klicks.slice().reverse().forEach(k=>{
+      const i=document.createElement('div');
+      i.className='ki';i.id='ki'+k.nr;
+      i.textContent='#'+k.nr+' t='+k.timestamp_s+'s x='+k.x+' y='+k.y+' - '+k.ort;
+      i.onclick=()=>{if(replayModus)vid.currentTime=k.timestamp_s;};
+      d.appendChild(i);
+    });
+  }
+}
+
+g('dl').onclick=()=>{
+  const skaliert=klicks.map(k=>({...k,
+    timestamp_s:parseFloat((k.timestamp_s*speedFactor).toFixed(3)),
+    timestamp_ms:parseFloat((k.timestamp_s*speedFactor*1000).toFixed(1)),
+    dauer_bis_naechster_s:k.dauer_bis_naechster_s!=null?parseFloat((k.dauer_bis_naechster_s*speedFactor).toFixed(3)):null
+  }));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify({video:'video.mp4',klicks_gesamt:klicks.length,speed_factor:speedFactor,kreise:skaliert},null,2)],{type:'application/json'}));
+  a.download='kreise_manuell.json';a.click();
+};
+
+setInterval(draw,50);
+</script>
+</body>
+</html>
