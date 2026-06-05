@@ -23,6 +23,9 @@ nav a:hover{border-color:#00d4aa;color:#00d4aa}
 .bn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:.95rem;font-weight:600;transition:all .2s}
 .bg{background:#00d4aa;color:#1a1a2e}.bg:hover{background:#00f5c4}
 .bd{background:#0f3460;color:#e0e0e0;border:1px solid #444}.bd:hover{border-color:#00d4aa}
+.bs{background:#0f3460;color:#e0e0e0;border:1px solid #444;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:.85rem;font-weight:600;transition:all .2s}
+.bs:hover{border-color:#00d4aa;color:#00d4aa}
+.bs.ak{background:#00d4aa;color:#1a1a2e;border-color:#00d4aa}
 .ib{display:flex;gap:20px;align-items:center;font-size:.9rem;color:#aaa;margin-left:auto}
 .iv{color:#00d4aa;font-weight:700;font-size:1.05rem}
 .ht{font-size:.8rem;color:#555;text-align:center;padding:8px;display:none}
@@ -35,35 +38,50 @@ nav a:hover{border-color:#00d4aa;color:#00d4aa}
 </head>
 <body>
 <nav>
-  <h1>🎯 Eye-Tracking Annotator</h1>
-  <a href="statistiken.html">📊 Statistiken →</a>
+  <h1>Eye-Tracking Annotator</h1>
+  <a href="statistiken.html">Statistiken</a>
 </nav>
 <div class="c">
   <div class="dz" id="dz">
-    <p>📁 Video hier reinziehen</p>
-    <small>oder klicken zum Auswählen (MP4)</small>
+    <p>Video hier reinziehen</p>
+    <small>oder klicken zum Auswaehlen (MP4)</small>
     <input type="file" id="fi" accept="video/*" style="display:none">
   </div>
   <div id="vw"><video id="vid" playsinline></video><canvas id="cv"></canvas></div>
   <div class="ctrl" id="ctrl">
-    <button class="bn bg" id="pb">▶ Play</button>
-    <button class="bn bd" id="rb">↺ Reset</button>
+    <button class="bn bg" id="pb">Play</button>
+    <button class="bn bd" id="rb">Reset</button>
+    <div style="display:flex;gap:6px;align-items:center">
+      <span style="font-size:.8rem;color:#888">Speed:</span>
+      <button class="bs" data-speed="0.25" onclick="setSpeed(0.25,this)">0.25x</button>
+      <button class="bs" data-speed="0.5" onclick="setSpeed(0.5,this)">0.5x</button>
+      <button class="bs ak" data-speed="1" onclick="setSpeed(1,this)">1x</button>
+      <button class="bs" data-speed="1.5" onclick="setSpeed(1.5,this)">1.5x</button>
+      <button class="bs" data-speed="2" onclick="setSpeed(2,this)">2x</button>
+    </div>
     <div class="ib">
       <div>t=<span class="iv" id="td">0s</span></div>
       <div>Klicks: <span class="iv" id="cc">0</span></div>
-      <div>Zuletzt: <span class="iv" id="lp">–</span></div>
+      <div>Zuletzt: <span class="iv" id="lp">-</span></div>
     </div>
   </div>
-  <p class="ht" id="ht">Leertaste = Pause/Play &nbsp;|&nbsp; Mausklick = Kreis annotieren</p>
+  <p class="ht" id="ht">Leertaste = Pause/Play | Mausklick = Kreis annotieren</p>
   <div class="kl" id="kl"><h3>Letzte Klicks</h3><div id="ki"></div></div>
-  <button id="dl">💾 JSON herunterladen (0 Klicks)</button>
+  <button id="dl">JSON herunterladen (0 Klicks)</button>
 </div>
 <script>
 const VW=1920,VH=1080,klicks=[],flash=[];
+let speedFactor=1;
 const vid=document.getElementById('vid'),cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 function ort(x,y){const c=x<VW/3?'links':(x<2*VW/3?'mitte':'rechts'),r=y<VH/3?'oben':(y<2*VH/3?'mitte':'unten');if(r==='mitte'&&c==='mitte')return 'zentrum';if(r==='mitte')return c;return r+'-'+c;}
 function g(id){return document.getElementById(id)}
 function load(f){vid.src=URL.createObjectURL(f);g('vw').style.display='block';g('ctrl').style.display='flex';g('ht').style.display='block';g('dz').style.display='none';}
+function setSpeed(f,btn){
+  speedFactor=f;
+  vid.playbackRate=f;
+  document.querySelectorAll('.bs').forEach(b=>b.classList.remove('ak'));
+  btn.classList.add('ak');
+}
 const dz=g('dz');
 g('fi').onchange=e=>{if(e.target.files[0])load(e.target.files[0])};
 dz.onclick=()=>g('fi').click();
@@ -72,9 +90,9 @@ dz.ondragleave=()=>dz.classList.remove('ov');
 dz.ondrop=e=>{e.preventDefault();dz.classList.remove('ov');if(e.dataTransfer.files[0])load(e.dataTransfer.files[0])};
 vid.onloadedmetadata=()=>{cv.width=vid.videoWidth;cv.height=vid.videoHeight};
 vid.ontimeupdate=()=>{g('td').textContent=vid.currentTime.toFixed(2)+'s';draw()};
-g('pb').onclick=()=>{if(vid.paused){vid.play();g('pb').textContent='⏸ Pause';}else{vid.pause();g('pb').textContent='▶ Play';}};
-g('rb').onclick=()=>{if(confirm('Alle Klicks löschen?')){klicks.length=0;flash.length=0;ui();}};
-document.onkeydown=e=>{if(e.code==='Space'&&g('vw').style.display!=='none'){e.preventDefault();if(vid.paused){vid.play();g('pb').textContent='⏸ Pause';}else{vid.pause();g('pb').textContent='▶ Play';}}};
+g('pb').onclick=()=>{if(vid.paused){vid.play();g('pb').textContent='Pause';}else{vid.pause();g('pb').textContent='Play';}};
+g('rb').onclick=()=>{if(confirm('Alle Klicks loeschen?')){klicks.length=0;flash.length=0;ui();}};
+document.onkeydown=e=>{if(e.code==='Space'&&g('vw').style.display!=='none'){e.preventDefault();if(vid.paused){vid.play();g('pb').textContent='Pause';}else{vid.pause();g('pb').textContent='Play';}}};
 vid.onclick=e=>{
   const r=vid.getBoundingClientRect();
   const x=Math.round((e.clientX-r.left)*(vid.videoWidth/r.width));
@@ -99,12 +117,21 @@ function draw(){
 }
 function ui(){
   g('cc').textContent=klicks.length;
-  g('dl').textContent='💾 JSON herunterladen ('+klicks.length+' Klicks)';
+  g('dl').textContent='JSON herunterladen ('+klicks.length+' Klicks)';
   g('dl').style.display=klicks.length>0?'block':'none';
   g('kl').style.display=klicks.length>0?'block':'none';
-  if(klicks.length>0){const l=klicks[klicks.length-1];g('lp').textContent=l.ort;const d=g('ki'),i=document.createElement('div');i.className='ki';i.textContent='#'+l.nr+' t='+l.timestamp_s+'s x='+l.x+' y='+l.y+' → '+l.ort;d.insertBefore(i,d.firstChild);if(d.children.length>20)d.removeChild(d.lastChild);}
+  if(klicks.length>0){const l=klicks[klicks.length-1];g('lp').textContent=l.ort;const d=g('ki'),i=document.createElement('div');i.className='ki';i.textContent='#'+l.nr+' t='+l.timestamp_s+'s x='+l.x+' y='+l.y+' - '+l.ort;d.insertBefore(i,d.firstChild);if(d.children.length>20)d.removeChild(d.lastChild);}
 }
-g('dl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({video:'video.mp4',klicks_gesamt:klicks.length,kreise:klicks},null,2)],{type:'application/json'}));a.download='kreise_manuell.json';a.click()};
+g('dl').onclick=()=>{
+  const skaliert=klicks.map(k=>({...k,
+    timestamp_s:parseFloat((k.timestamp_s*speedFactor).toFixed(3)),
+    timestamp_ms:parseFloat((k.timestamp_s*speedFactor*1000).toFixed(1)),
+    dauer_bis_naechster_s:k.dauer_bis_naechster_s!=null?parseFloat((k.dauer_bis_naechster_s*speedFactor).toFixed(3)):null
+  }));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify({video:'video.mp4',klicks_gesamt:klicks.length,speed_factor:speedFactor,kreise:skaliert},null,2)],{type:'application/json'}));
+  a.download='kreise_manuell.json';a.click();
+};
 setInterval(draw,50);
 </script>
 </body>
