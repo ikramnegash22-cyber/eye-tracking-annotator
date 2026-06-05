@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eye-Tracking Replay</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;color:#e0e0e0;font-family:sans-serif;min-height:100vh}
+nav{background:#16213e;padding:16px 32px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #f39c12}
+nav h1{font-size:1.3rem;color:#f39c12}
+nav a{color:#aaa;text-decoration:none;padding:8px 16px;border:1px solid #444;border-radius:6px;transition:all .2s}
+nav a:hover{border-color:#f39c12;color:#f39c12}
+.c{max-width:1200px;margin:0 auto;padding:32px 24px}
+.uploads{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.dz{border:2px dashed #444;border-radius:12px;padding:32px;text-align:center;cursor:pointer;background:#16213e;transition:all .3s}
+.dz:hover,.dz.ov{border-color:#f39c12;background:#2c1a0e}
+.dz p{font-size:1rem;color:#aaa;margin-bottom:6px}
+.dz small{color:#666;font-size:.8rem}
+.dz .icon{font-size:2rem;margin-bottom:8px}
+.dz.ready{border-color:#00d4aa;background:#0a2a1a}
+.dz.ready p{color:#00d4aa}
+#vw{display:none;position:relative;background:#000;border-radius:12px;overflow:hidden;margin-bottom:16px}
+#vid{width:100%;display:block}
+#cv{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+.ctrl{display:none;align-items:center;gap:12px;padding:16px;background:#16213e;border-radius:10px;margin-bottom:16px;flex-wrap:wrap}
+.bn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:.95rem;font-weight:600;transition:all .2s}
+.bg{background:#f39c12;color:#1a1a2e}.bg:hover{background:#f5b942}
+.bd{background:#0f3460;color:#e0e0e0;border:1px solid #444}.bd:hover{border-color:#f39c12}
+.progress-wrap{width:100%;height:8px;background:#2a2a4a;border-radius:4px;cursor:pointer;margin-bottom:4px}
+.progress-bar{height:8px;background:#f39c12;border-radius:4px;transition:width .1s linear;pointer-events:none}
+.timeline{background:#16213e;border-radius:10px;padding:16px;max-height:200px;overflow-y:auto;margin-bottom:16px;display:none}
+.timeline h3{color:#f39c12;margin-bottom:8px;font-size:.9rem}
+.ti{font-size:.8rem;color:#aaa;padding:4px 6px;border-bottom:1px solid #2a2a4a;cursor:pointer;border-radius:4px;transition:all .15s;display:flex;gap:12px}
+.ti:hover{background:#0f3460;color:#fff}
+.ti.aktiv{background:#2c1a0e;color:#f39c12;border-left:3px solid #f39c12}
+.info{display:flex;gap:20px;align-items:center;font-size:.9rem;color:#aaa;margin-left:auto;flex-wrap:wrap}
+.iv{color:#f39c12;font-weight:700}
+</style>
+</head>
+<body>
+<nav>
+  <h1>Replay</h1>
+  <div style="display:flex;gap:12px">
+    <a href="annotator.html">Annotator</a>
+    <a href="statistiken.html">Statistiken</a>
+  </div>
+</nav>
+<div class="c">
+  <div class="uploads">
+    <div class="dz" id="dzV">
+      <div class="icon">🎬</div>
+      <p>Video hier reinziehen</p>
+      <small>MP4 Datei auswaehlen</small>
+      <input type="file" id="fiV" accept="video/*" style="display:none">
+    </div>
+    <div class="dz" id="dzJ">
+      <div class="icon">📋</div>
+      <p>JSON hier reinziehen</p>
+      <small>kreise_manuell.json auswaehlen</small>
+      <input type="file" id="fiJ" accept=".json" style="display:none">
+    </div>
+  </div>
+
+  <div id="vw"><video id="vid" playsinline></video><canvas id="cv"></canvas></div>
+
+  <div class="progress-wrap" id="pw" style="display:none">
+    <div class="progress-bar" id="pb2" style="width:0%"></div>
+  </div>
+
+  <div class="ctrl" id="ctrl">
+    <button class="bn bg" id="playBtn">Play</button>
+    <div class="info">
+      <div>t=<span class="iv" id="td">0.00s</span></div>
+      <div>Klick: <span class="iv" id="curKlick">-</span></div>
+      <div>Geladen: <span class="iv" id="total">0</span> Kreise</div>
+    </div>
+  </div>
+
+  <div class="timeline" id="tl">
+    <h3>Klick-Timeline (klicken zum Springen)</h3>
+    <div id="tlContent"></div>
+  </div>
+</div>
+
+<script>
+const vid=document.getElementById('vid');
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d');
+let kreise=[], videoLoaded=false, jsonLoaded=false;
+
+function g(id){return document.getElementById(id)}
+
+// Video laden
+function setupDZ(dzId, fiId, onFile){
+  const dz=g(dzId), fi=g(fiId);
+  fi.onchange=e=>{if(e.target.files[0])onFile(e.target.files[0])};
+  dz.onclick=()=>fi.click();
+  dz.ondragover=e=>{e.preventDefault();dz.classList.add('ov')};
+  dz.ondragleave=()=>dz.classList.remove('ov');
+  dz.ondrop=e=>{e.preventDefault();dz.classList.remove('ov');if(e.dataTransfer.files[0])onFile(e.dataTransfer.files[0])};
+}
+
+setupDZ('dzV','fiV',f=>{
+  vid.src=URL.createObjectURL(f);
+  videoLoaded=true;
+  g('dzV').classList.add('ready');
+  g('dzV').querySelector('p').textContent='Video geladen: '+f.name;
+  checkReady();
+});
+
+setupDZ('dzJ','fiJ',f=>{
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      kreise=data.kreise||[];
+      jsonLoaded=true;
+      g('dzJ').classList.add('ready');
+      g('dzJ').querySelector('p').textContent='JSON geladen: '+kreise.length+' Kreise';
+      g('total').textContent=kreise.length;
+      buildTimeline();
+      checkReady();
+    }catch(err){alert('Ungueltige JSON Datei');}
+  };
+  r.readAsText(f);
+});
+
+function checkReady(){
+  if(videoLoaded && jsonLoaded){
+    g('vw').style.display='block';
+    g('ctrl').style.display='flex';
+    g('pw').style.display='block';
+    g('tl').style.display='block';
+  }
+}
+
+vid.onloadedmetadata=()=>{
+  cv.width=vid.videoWidth;
+  cv.height=vid.videoHeight;
+};
+
+// Play/Pause
+g('playBtn').onclick=()=>{
+  if(vid.paused){vid.play();g('playBtn').textContent='Pause';}
+  else{vid.pause();g('playBtn').textContent='Play';}
+};
+
+document.onkeydown=e=>{
+  if(e.code==='Space'){
+    e.preventDefault();
+    if(vid.paused){vid.play();g('playBtn').textContent='Pause';}
+    else{vid.pause();g('playBtn').textContent='Play';}
+  }
+};
+
+// Fortschrittsleiste klickbar
+g('pw').onclick=e=>{
+  const r=g('pw').getBoundingClientRect();
+  const pct=(e.clientX-r.left)/r.width;
+  vid.currentTime=pct*vid.duration;
+};
+
+// Timeline aufbauen
+function buildTimeline(){
+  const c=g('tlContent');
+  c.innerHTML='';
+  kreise.forEach((k,i)=>{
+    const d=document.createElement('div');
+    d.className='ti';
+    d.id='ti'+i;
+    d.innerHTML='<span style="color:#f39c12;min-width:30px">#'+k.nr+'</span><span style="min-width:70px">'+k.timestamp_s+'s</span><span style="min-width:80px">x='+k.x+' y='+k.y+'</span><span>'+k.ort+'</span>';
+    d.onclick=()=>{vid.currentTime=k.timestamp_s;};
+    c.appendChild(d);
+  });
+}
+
+// Update loop
+vid.ontimeupdate=()=>{
+  const t=vid.currentTime;
+  g('td').textContent=t.toFixed(2)+'s';
+  if(vid.duration>0) g('pb2').style.width=(t/vid.duration*100)+'%';
+  draw(t);
+  updateTimeline(t);
+};
+
+function draw(t){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  if(kreise.length===0) return;
+
+  // Finde den naechsten Kreis zum aktuellen Zeitpunkt (0.6s Fenster)
+  const aktiv=kreise.filter(k=>Math.abs(k.timestamp_s-t)<0.6);
+
+  aktiv.forEach(k=>{
+    const abstand=Math.abs(k.timestamp_s-t);
+    const alpha=1-(abstand/0.6);
+
+    // Gefuellter Kreis (halbtransparent)
+    ctx.fillStyle='rgba(243,156,18,'+alpha*0.25+')';
+    ctx.beginPath();ctx.arc(k.x,k.y,40,0,Math.PI*2);ctx.fill();
+
+    // Kreisrand
+    ctx.strokeStyle='rgba(243,156,18,'+alpha+')';
+    ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(k.x,k.y,40,0,Math.PI*2);ctx.stroke();
+
+    // Fadenkreuz
+    ctx.beginPath();
+    ctx.moveTo(k.x-28,k.y);ctx.lineTo(k.x+28,k.y);
+    ctx.moveTo(k.x,k.y-28);ctx.lineTo(k.x,k.y+28);
+    ctx.stroke();
+
+    // Nummer anzeigen
+    ctx.fillStyle='rgba(243,156,18,'+alpha+')';
+    ctx.font='bold 20px sans-serif';
+    ctx.fillText('#'+k.nr, k.x+44, k.y+6);
+  });
+
+  // Naechsten Klick info
+  const naechster=kreise.reduce((best,k)=>Math.abs(k.timestamp_s-t)<Math.abs(best.timestamp_s-t)?k:best, kreise[0]);
+  if(naechster) g('curKlick').textContent='#'+naechster.nr+' ('+naechster.timestamp_s+'s)';
+}
+
+function updateTimeline(t){
+  // Naechsten aktiven Klick markieren
+  kreise.forEach((k,i)=>{
+    const el=g('ti'+i);
+    if(!el) return;
+    if(Math.abs(k.timestamp_s-t)<0.6){
+      el.classList.add('aktiv');
+      el.scrollIntoView({block:'nearest',behavior:'smooth'});
+    } else {
+      el.classList.remove('aktiv');
+    }
+  });
+}
+
+setInterval(()=>{if(!vid.paused) draw(vid.currentTime);},50);
+</script>
+</body>
+</html>
