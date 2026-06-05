@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eye-Tracking Replay</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;color:#e0e0e0;font-family:sans-serif;min-height:100vh}
+nav{background:#16213e;padding:16px 32px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #f39c12}
+nav h1{font-size:1.3rem;color:#f39c12}
+nav div{display:flex;gap:8px}
+nav a{color:#aaa;text-decoration:none;padding:8px 16px;border:1px solid #444;border-radius:6px;transition:all .2s}
+nav a:hover{border-color:#f39c12;color:#f39c12}
+.c{max-width:1200px;margin:0 auto;padding:32px 24px}
+.uploads{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.dz{border:2px dashed #444;border-radius:12px;padding:32px;text-align:center;cursor:pointer;background:#16213e;transition:all .3s}
+.dz:hover,.dz.ov{border-color:#f39c12;background:#2c1a0e}
+.dz p{font-size:1rem;color:#aaa;margin-bottom:6px}
+.dz small{color:#666;font-size:.8rem}
+.dz .icon{font-size:2rem;margin-bottom:8px;display:block}
+.dz.ready{border-color:#00d4aa}
+.dz.ready p{color:#00d4aa}
+#vw{display:none;position:relative;background:#000;border-radius:12px;overflow:hidden;margin-bottom:8px}
+#vid{width:100%;display:block}
+#cv{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+.pbar-wrap{display:none;width:100%;height:12px;background:#2a2a4a;border-radius:6px;cursor:pointer;margin-bottom:12px}
+.pbar{height:12px;background:#f39c12;border-radius:6px;pointer-events:none}
+.ctrl{display:none;align-items:center;gap:12px;padding:16px;background:#16213e;border-radius:10px;margin-bottom:16px;flex-wrap:wrap}
+.bn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:.95rem;font-weight:600;transition:all .2s}
+.by{background:#f39c12;color:#1a1a2e}.by:hover{background:#f5b942}
+.bd{background:#0f3460;color:#e0e0e0;border:1px solid #444}.bd:hover{border-color:#f39c12}
+.ib{display:flex;gap:16px;align-items:center;font-size:.9rem;color:#aaa;margin-left:auto}
+.iv{color:#f39c12;font-weight:700}
+.hint{font-size:.8rem;color:#555;text-align:center;padding:6px;display:none}
+.tl{background:#16213e;border-radius:10px;padding:16px;max-height:180px;overflow-y:auto;margin-bottom:16px;display:none}
+.tl h3{color:#f39c12;margin-bottom:8px;font-size:.9rem}
+.ti{font-size:.8rem;color:#aaa;padding:4px 8px;border-bottom:1px solid #2a2a4a;cursor:pointer;border-radius:4px;transition:all .15s;display:flex;gap:10px}
+.ti:hover{background:#0f3460;color:#fff}
+.ti.ak{background:#2c1a0e;color:#f39c12;border-left:3px solid #f39c12}
+</style>
+</head>
+<body>
+<nav>
+  <h1>▶ Eye-Tracking Replay</h1>
+  <div>
+    <a href="annotator.html">🎯 Annotator</a>
+    <a href="statistiken.html">📊 Statistiken</a>
+  </div>
+</nav>
+<div class="c">
+
+  <div class="uploads">
+    <div class="dz" id="dzV">
+      <span class="icon">🎬</span>
+      <p>Video hier reinziehen</p>
+      <small>MP4 auswaehlen</small>
+      <input type="file" id="fiV" style="display:none">
+    </div>
+    <div class="dz" id="dzJ">
+      <span class="icon">📋</span>
+      <p>JSON hier reinziehen</p>
+      <small>kreise_manuell.json auswaehlen</small>
+      <input type="file" id="fiJ" accept=".json" style="display:none">
+    </div>
+  </div>
+
+  <div id="vw">
+    <video id="vid" playsinline></video>
+    <canvas id="cv"></canvas>
+  </div>
+
+  <div class="pbar-wrap" id="pw">
+    <div class="pbar" id="pb" style="width:0%"></div>
+  </div>
+
+  <div class="ctrl" id="ctrl">
+    <button class="bn by" id="playBtn">▶ Play</button>
+    <div class="ib">
+      <div>t = <span class="iv" id="td">0.00s</span></div>
+      <div>Kreise: <span class="iv" id="tot">0</span></div>
+      <div>Aktuell: <span class="iv" id="cur">-</span></div>
+    </div>
+  </div>
+
+  <p class="hint" id="hint">Leertaste = Play/Pause | Klick auf Leiste = Springen | Liste anklicken = zum Zeitpunkt</p>
+
+  <div class="tl" id="tl">
+    <h3>Klick-Timeline (anklicken = zum Zeitpunkt springen)</h3>
+    <div id="tlc"></div>
+  </div>
+
+</div>
+<script>
+const vid=document.getElementById('vid'),cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+let kreise=[],videoOk=false,jsonOk=false;
+function g(id){return document.getElementById(id)}
+
+function setupDZ(dzId,fiId,cb){
+  const dz=g(dzId),fi=g(fiId);
+  fi.onchange=e=>{if(e.target.files[0])cb(e.target.files[0])};
+  dz.onclick=()=>fi.click();
+  dz.ondragover=e=>{e.preventDefault();dz.classList.add('ov')};
+  dz.ondragleave=()=>dz.classList.remove('ov');
+  dz.ondrop=e=>{e.preventDefault();dz.classList.remove('ov');if(e.dataTransfer.files[0])cb(e.dataTransfer.files[0])};
+}
+
+setupDZ('dzV','fiV',f=>{
+  vid.src=URL.createObjectURL(f);
+  videoOk=true;
+  g('dzV').classList.add('ready');
+  g('dzV').querySelector('p').textContent='Video: '+f.name;
+  check();
+});
+
+setupDZ('dzJ','fiJ',f=>{
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const d=JSON.parse(e.target.result);
+      kreise=d.kreise||[];
+      jsonOk=true;
+      g('dzJ').classList.add('ready');
+      g('dzJ').querySelector('p').textContent='JSON: '+kreise.length+' Kreise geladen';
+      g('tot').textContent=kreise.length;
+      buildTimeline();
+      check();
+    }catch(err){alert('Ungueltige JSON Datei');}
+  };
+  r.readAsText(f);
+});
+
+function check(){
+  if(videoOk&&jsonOk){
+    g('vw').style.display='block';
+    g('pw').style.display='block';
+    g('ctrl').style.display='flex';
+    g('hint').style.display='block';
+    g('tl').style.display='block';
+  }
+}
+
+vid.onloadedmetadata=()=>{cv.width=vid.videoWidth;cv.height=vid.videoHeight};
+
+g('pw').onclick=e=>{
+  const r=g('pw').getBoundingClientRect();
+  vid.currentTime=(e.clientX-r.left)/r.width*vid.duration;
+};
+
+g('playBtn').onclick=()=>togglePlay();
+document.onkeydown=e=>{if(e.code==='Space'){e.preventDefault();togglePlay();}};
+function togglePlay(){
+  if(vid.paused){vid.play();g('playBtn').textContent='⏸ Pause';}
+  else{vid.pause();g('playBtn').textContent='▶ Play';}
+}
+
+function buildTimeline(){
+  const c=g('tlc');c.innerHTML='';
+  kreise.forEach((k,i)=>{
+    const d=document.createElement('div');
+    d.className='ti';d.id='ti'+i;
+    d.innerHTML='<span style="color:#f39c12;min-width:28px">#'+k.nr+'</span><span style="min-width:65px">'+k.timestamp_s+'s</span><span style="min-width:90px">x='+k.x+' y='+k.y+'</span><span>'+k.ort+'</span>';
+    d.onclick=()=>{vid.currentTime=k.timestamp_s;};
+    c.appendChild(d);
+  });
+}
+
+vid.ontimeupdate=()=>{
+  const t=vid.currentTime;
+  g('td').textContent=t.toFixed(2)+'s';
+  if(vid.duration>0)g('pb').style.width=(t/vid.duration*100)+'%';
+  draw(t);
+  updateTL(t);
+};
+
+function draw(t){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  kreise.forEach(k=>{
+    const diff=Math.abs(k.timestamp_s-t);
+    if(diff<0.65){
+      const a=1-(diff/0.65);
+      ctx.fillStyle='rgba(243,156,18,'+a*0.2+')';
+      ctx.beginPath();ctx.arc(k.x,k.y,40,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='rgba(243,156,18,'+a+')';
+      ctx.lineWidth=3;
+      ctx.beginPath();ctx.arc(k.x,k.y,40,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(k.x-28,k.y);ctx.lineTo(k.x+28,k.y);
+      ctx.moveTo(k.x,k.y-28);ctx.lineTo(k.x,k.y+28);
+      ctx.stroke();
+      ctx.fillStyle='rgba(243,156,18,'+a+')';
+      ctx.font='bold 18px sans-serif';
+      ctx.fillText('#'+k.nr,k.x+44,k.y+6);
+    }
+  });
+  const n=kreise.reduce((b,k)=>Math.abs(k.timestamp_s-t)<Math.abs(b.timestamp_s-t)?k:b,kreise[0]);
+  if(n)g('cur').textContent='#'+n.nr+' ('+n.timestamp_s+'s)';
+}
+
+function updateTL(t){
+  kreise.forEach((k,i)=>{
+    const el=g('ti'+i);if(!el)return;
+    if(Math.abs(k.timestamp_s-t)<0.65){el.classList.add('ak');el.scrollIntoView({block:'nearest',behavior:'smooth'});}
+    else el.classList.remove('ak');
+  });
+}
+
+setInterval(()=>{if(!vid.paused)draw(vid.currentTime);},50);
+</script>
+</body>
+</html>
